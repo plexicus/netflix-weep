@@ -263,19 +263,34 @@ func RefreshChallenge() error {
 	logging.Log.Infof("Opening browser to Challenge URL location: %s", challenge.ChallengeURL)
 
 	// Step 2: Make a web request to ChallengeUrl with user's browser
-	var openUrlCommand []string = nil
-	switch runtime.GOOS {
-	case "darwin":
-		openUrlCommand = []string{"open"}
-	case "linux":
-		if isWSL() {
-			openUrlCommand = []string{"cmd.exe", "/C", "start"}
-		} else {
-			openUrlCommand = []string{"xdg-open"}
-		}
-	case "windows":
-		openUrlCommand = []string{"cmd", "/C", "start"}
-	}
+var allowed_commands = map[string]bool{
+    "open": true,
+    "xdg-open": true,
+    "cmd.exe": true,
+    "cmd": true,
+}
+
+var openUrlCommand []string = nil
+switch runtime.GOOS {
+case "darwin":
+    if allowed_commands["open"] {
+        openUrlCommand = []string{"open"}
+    }
+case "linux":
+    if isWSL() {
+        if allowed_commands["cmd.exe"] {
+            openUrlCommand = []string{"cmd.exe", "/C", "start"}
+        }
+    } else {
+        if allowed_commands["xdg-open"] {
+            openUrlCommand = []string{"xdg-open"}
+        }
+    }
+case "windows":
+    if allowed_commands["cmd"] {
+        openUrlCommand = []string{"cmd", "/C", "start"}
+    }
+}
 
 	if openUrlCommand != nil {
 		cmd := exec.Command(openUrlCommand[0], append(openUrlCommand[1:], challenge.ChallengeURL)...)
